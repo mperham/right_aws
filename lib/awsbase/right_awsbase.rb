@@ -168,6 +168,29 @@ module RightAws
       @@amazon_problems = problems_list
     end
     
+    # Create a thread-local storage variable associated with this module.
+    # The variable is named like "<class>_<name>"
+    %w(last_request last_response last_errors last_request_id connection).each do |attrib|
+      sym = attrib.to_sym
+      tls_name = :"#{self.name}_#{sym}"
+      define_method sym do
+        Thread.current[tls_name]
+      end
+      define_method :"#{sym}=" do |value|
+        Thread.current[tls_name] = value
+      end
+    end
+
+    #   # Last HTTP request object
+    # attr_reader :last_request
+    #   # Last HTTP response object
+    # attr_reader :last_response
+    #   # Last AWS errors list (used by AWSErrorHandler)
+    # attr_accessor :last_errors
+    #   # Last AWS request id (used by AWSErrorHandler)
+    # attr_accessor :last_request_id
+    #   # RightHttpConnection instance
+    # attr_reader :connection
   end
 
   module RightAwsBaseInterface
@@ -183,20 +206,10 @@ module RightAws
 
       # Current aws_access_key_id
     attr_reader :aws_access_key_id
-      # Last HTTP request object
-    attr_reader :last_request
-      # Last HTTP response object
-    attr_reader :last_response
-      # Last AWS errors list (used by AWSErrorHandler)
-    attr_accessor :last_errors
-      # Last AWS request id (used by AWSErrorHandler)
-    attr_accessor :last_request_id
       # Logger object
     attr_accessor :logger
       # Initial params hash
     attr_accessor :params
-      # RightHttpConnection instance
-    attr_reader :connection
       # Cache
     attr_reader :cache
       # Signature version (all services except s3)
@@ -295,9 +308,9 @@ module RightAws
     end
 
     def request_info_impl(connection, benchblock, request, parser, &block) #:nodoc:
-      @connection    = connection
-      @last_request  = request[:request]
-      @last_response = nil
+      self.connection    = connection
+      self.last_request  = request[:request]
+      self.last_response = nil
       response=nil
       blockexception = nil
 
@@ -310,10 +323,10 @@ module RightAws
         # Exceptions can originate from code directly in the block, or from user
         # code called in the other block which is passed to response.read_body.
         benchblock.service.add! do
-          responsehdr = @connection.request(request) do |response|
+          responsehdr = self.connection.request(request) do |response|
           #########
             begin
-              @last_response = response
+              self.last_response = response
               if response.is_a?(Net::HTTPSuccess)
                 @error_handler = nil
                 response.read_body(&block)
@@ -324,7 +337,7 @@ module RightAws
                   @error_handler = nil
                   return check_result 
                 end
-                raise AwsError.new(@last_errors, @last_response.code, @last_request_id)
+                raise AwsError.new(self.last_errors, self.last_response.code, self.last_request_id)
               end
             rescue Exception => e
               blockexception = e
@@ -342,9 +355,9 @@ module RightAws
           return parser.result
         end
       else
-        benchblock.service.add!{ response = @connection.request(request) }
+        benchblock.service.add!{ response = self.connection.request(request) }
           # check response for errors...
-        @last_response = response
+        self.last_response = response
         if response.is_a?(Net::HTTPSuccess)
           @error_handler = nil
           benchblock.xml.add! { parser.parse(response) }
@@ -356,7 +369,7 @@ module RightAws
             @error_handler = nil
             return check_result 
           end
-          raise AwsError.new(@last_errors, @last_response.code, @last_request_id)
+          raise AwsError.new(self.last_errors, self.last_response.code, self.last_request_id)
         end
       end
     rescue
@@ -382,7 +395,7 @@ module RightAws
 
     # Returns Amazons request ID for the latest request
     def last_request_id
-      @last_response && @last_response.body.to_s[%r{<requestId>(.+?)</requestId>}] && $1
+      self.last_response && self.last_response.body.to_s[%r{<requestId>(.+?)</requestId>}] && $1
     end
 
   end

@@ -244,3 +244,6 @@ the source key.
   - S3: Fixed overzealous URL-encoding when generating URLs for S3 keys
     (thanks to a bug report on the RubyForge forum)
   
+=== 1.10.1
+
+  Fix issue with error handling when used in multi-threaded mode. (mperham)
