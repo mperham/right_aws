@@ -761,9 +761,12 @@ module RightAws
         @name  = name
         @perms = perms.to_a
         case action
-          when :apply:             apply
-          when :refresh:           refresh
-          when :apply_and_refresh: apply; refresh
+          when :apply
+            apply
+          when :refresh
+            refresh
+          when :apply_and_refresh
+            apply; refresh
         end
       end
       
