@@ -23,7 +23,7 @@
 
 # Test
 module RightAws
-  require 'md5'
+  require 'digest/md5'
   require 'pp'
   
   class AwsUtils #:nodoc:
@@ -270,7 +270,7 @@ module RightAws
         function = function.to_sym
         # get rid of requestId (this bad boy was added for API 2008-08-08+ and it is uniq for every response)
         response = response.sub(%r{<requestId>.+?</requestId>}, '')
-        response_md5 = MD5.md5(response).to_s
+        response_md5 = Digest::MD5.digest(response)
         # check for changes
         unless @cache[function] && @cache[function][:response_md5] == response_md5
           # well, the response is new, reset cache data
