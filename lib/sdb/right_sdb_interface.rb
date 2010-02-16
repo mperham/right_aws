@@ -94,7 +94,7 @@ module RightAws
         end
         request      = Net::HTTP::Post.new(service)
         request.body = service_params
-        request['Content-Type'] = 'application/x-www-form-urlencoded'
+        request['Content-Type'] = 'application/x-www-form-urlencoded; charset=utf-8'
       else
         request = Net::HTTP::Get.new("#{service}?#{service_params}")
       end
